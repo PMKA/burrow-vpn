@@ -1,5 +1,5 @@
 Package: burrow-vpn
-Version: 0.7.0
+Version: 0.7.1
 Section: net
 Priority: optional
 Architecture: amd64

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +16,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.7.0"
+const currentVersion = "0.7.1"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
@@ -47,7 +49,7 @@ func runUpdateCheck(app *App) {
 	if !app.cfg.CheckForUpdates {
 		return
 	}
-	version, debURL, err := fetchLatestRelease()
+	version, debURL, sha256Sum, err := fetchLatestRelease()
 	if err != nil {
 		logf("update check failed: %v", err)
 		glib.IdleAdd(func() bool {
@@ -58,7 +60,7 @@ func runUpdateCheck(app *App) {
 	}
 	if isNewerVersion(version, currentVersion) {
 		logf("update available: v%s → v%s", currentVersion, version)
-		app.onUpdateFound(version, debURL)
+		app.onUpdateFound(version, debURL, sha256Sum)
 	} else {
 		logf("update check: already on latest (%s)", currentVersion)
 		glib.IdleAdd(func() bool {
@@ -68,30 +70,79 @@ func runUpdateCheck(app *App) {
 	}
 }
 
-func fetchLatestRelease() (version, debURL string, err error) {
+func fetchLatestRelease() (version, debURL, sha256Sum string, err error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, _ := http.NewRequest("GET", releaseAPI, nil)
 	req.Header.Set("User-Agent", "burrow-vpn/"+currentVersion)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer resp.Body.Close()
 
 	var r githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	version = strings.TrimPrefix(r.TagName, "v")
+	var debName, checksumURL string
 	for _, a := range r.Assets {
 		if strings.HasSuffix(a.Name, "_amd64.deb") {
 			debURL = a.BrowserDownloadURL
+			debName = a.Name
+		}
+	}
+	for _, a := range r.Assets {
+		if a.Name == debName+".sha256" {
+			checksumURL = a.BrowserDownloadURL
 			break
 		}
 	}
-	return version, debURL, nil
+	if checksumURL != "" {
+		sum, cerr := fetchChecksum(checksumURL)
+		if cerr != nil {
+			logf("could not fetch checksum for %s: %v", debName, cerr)
+		} else {
+			sha256Sum = sum
+		}
+	}
+	return version, debURL, sha256Sum, nil
+}
+
+// fetchChecksum downloads a "<hash>  <filename>"-style checksum file and
+// returns the hash (lowercase hex).
+func fetchChecksum(url string) (string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return "", fmt.Errorf("empty checksum file")
+	}
+	return strings.ToLower(fields[0]), nil
+}
+
+// sha256File returns the lowercase hex SHA-256 digest of a file's contents.
+func sha256File(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func downloadUpdate(url string, onProgress func(float64)) (string, error) {
@@ -149,7 +200,7 @@ func installUpdate(debPath string) error {
 	return fmt.Errorf("installation failed — try: sudo dpkg -i %s", debPath)
 }
 
-func performUpdate(app *App, version, debURL string) {
+func performUpdate(app *App, version, debURL, expectedSHA256 string) {
 	glib.IdleAdd(func() bool {
 		dlg, _ := gtk.DialogNew()
 		dlg.SetTitle("Update Burrow VPN")
@@ -205,6 +256,23 @@ func performUpdate(app *App, version, debURL string) {
 					return false
 				})
 				return
+			}
+
+			if expectedSHA256 != "" {
+				actual, err := sha256File(debPath)
+				if err != nil || actual != expectedSHA256 {
+					os.Remove(debPath)
+					logf("checksum verification failed for v%s: got %s want %s (err=%v)", version, actual, expectedSHA256, err)
+					glib.IdleAdd(func() bool {
+						progDlg.Destroy()
+						notify("Burrow VPN", "Update aborted: checksum verification failed")
+						return false
+					})
+					return
+				}
+				logf("checksum verified for v%s", version)
+			} else {
+				logf("warning: no checksum available for v%s, installing unverified", version)
 			}
 
 			glib.IdleAdd(func() bool {

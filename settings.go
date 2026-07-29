@@ -217,7 +217,7 @@ func newSettingsWindow(app *App) *SettingsWindow {
 		checkBtn.SetSensitive(false)
 		statusLabel.SetText("Checking…")
 		go func() {
-			v, u, err := fetchLatestRelease()
+			v, u, sum, err := fetchLatestRelease()
 			glib.IdleAdd(func() bool {
 				checkBtn.SetSensitive(true)
 				if err != nil {
@@ -226,7 +226,7 @@ func newSettingsWindow(app *App) *SettingsWindow {
 				}
 				if isNewerVersion(v, currentVersion) {
 					statusLabel.SetText("v" + v + " available!")
-					app.onUpdateFound(v, u)
+					app.onUpdateFound(v, u, sum)
 				} else {
 					statusLabel.SetText("You're up to date")
 				}
