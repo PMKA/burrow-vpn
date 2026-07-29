@@ -4,13 +4,14 @@ update-desktop-database /usr/share/applications || true
 gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
 chmod 0440 /etc/sudoers.d/burrow || true
 
-# Notify the logged-in user to launch the app
 REAL_USER="${SUDO_USER:-$(logname 2>/dev/null || true)}"
 if [ -n "$REAL_USER" ]; then
     USER_ID=$(id -u "$REAL_USER" 2>/dev/null || true)
     if [ -n "$USER_ID" ]; then
-        DBUS_ADDR=$(su - "$REAL_USER" -c 'cat /run/user/'"$USER_ID"'/bus 2>/dev/null | head -1 || echo ""' 2>/dev/null || true)
-        DISPLAY_ENV="DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$USER_ID/bus"
-        su - "$REAL_USER" -c "$DISPLAY_ENV notify-send -i burrow-vpn 'Burrow VPN installed' 'Launch Burrow VPN from your app launcher to get started.'" 2>/dev/null || true
+        DBUS="unix:path=/run/user/${USER_ID}/bus"
+        # Launch the app into the user's session
+        su - "$REAL_USER" -c \
+            "DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=${DBUS} nohup /usr/local/bin/burrow-vpn >/dev/null 2>&1 &" \
+            2>/dev/null || true
     fi
 fi
