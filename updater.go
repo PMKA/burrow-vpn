@@ -10,12 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getlantern/systray"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.6.5"
+const currentVersion = "0.6.6"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
@@ -243,8 +242,7 @@ func performUpdate(app *App, version, debURL string) {
 					exe, _ := os.Executable()
 					releaseLock()
 					exec.Command(exe).Start()
-					gtk.MainQuit()
-					systray.Quit()
+					os.Exit(0)
 				} else {
 					rdlg.Destroy()
 				}
