@@ -7,7 +7,7 @@ import (
 // runSetupWizard opens a first-run modal and returns the updated config.
 // Called when no WireGuard connection is configured yet.
 func runSetupWizard(parent *gtk.Window, cfg Config) Config {
-	dlg, _ := gtk.DialogNewWithButtons("Welcome to Burrow", parent,
+	dlg, _ := gtk.DialogNewWithButtons("Welcome to Burrow VPN", parent,
 		gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT,
 		[]interface{}{"Done", gtk.RESPONSE_OK},
 	)

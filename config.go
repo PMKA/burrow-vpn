@@ -16,7 +16,7 @@ type Config struct {
 
 func configPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "burrow", "config.json")
+	return filepath.Join(home, ".config", "burrow-vpn", "config.json")
 }
 
 func loadConfig() Config {

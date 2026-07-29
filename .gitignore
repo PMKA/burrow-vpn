@@ -1,5 +1,6 @@
-# Build output
+# Build outputs
 burrow
+burrow-vpn
 
 # Packaging staging binary (rebuilt on each ./build-deb.sh run)
-packaging/usr/local/bin/burrow
+packaging/usr/local/bin/burrow-vpn

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.3.0"
+VERSION="0.4.0"
 ARCH="amd64"
 PKG="burrow-vpn_${VERSION}_${ARCH}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -9,14 +9,14 @@ STAGE="$ROOT/packaging"
 
 echo "==> Building binary..."
 cd "$ROOT"
-go build -ldflags="-s -w" -o burrow .
+go build -ldflags="-s -w" -o burrow-vpn .
 
 echo "==> Staging files..."
-cp burrow "$STAGE/usr/local/bin/burrow"
-chmod 755 "$STAGE/usr/local/bin/burrow"
+cp burrow-vpn "$STAGE/usr/local/bin/burrow-vpn"
+chmod 755 "$STAGE/usr/local/bin/burrow-vpn"
 chmod 755 "$STAGE/DEBIAN/postinst"
 
-cp icons/burrow.svg "$STAGE/usr/share/icons/hicolor/scalable/apps/burrow.svg"
+cp icons/burrow-on.png  "$STAGE/usr/share/icons/hicolor/512x512/apps/burrow-vpn.png"
 
 echo "==> Building .deb..."
 dpkg-deb --root-owner-group --build "$STAGE" "${PKG}.deb"

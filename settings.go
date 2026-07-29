@@ -12,7 +12,7 @@ type SettingsWindow struct {
 
 func newSettingsWindow(app *App) *SettingsWindow {
 	win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
-	win.SetTitle("Burrow — Settings")
+	win.SetTitle("Burrow VPN — Settings")
 	win.SetDefaultSize(480, 420)
 	win.SetBorderWidth(16)
 	win.SetResizable(false)

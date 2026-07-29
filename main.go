@@ -61,8 +61,8 @@ func onReady() {
 	if icon := readIconFile("burrow-off.png"); icon != nil {
 		systray.SetIcon(icon)
 	}
-	systray.SetTitle("Burrow")
-	systray.SetTooltip("Burrow")
+	systray.SetTitle("Burrow VPN")
+	systray.SetTooltip("Burrow VPN")
 
 	// Status (disabled, informational)
 	app.mStatus = systray.AddMenuItem("Status: checking…", "")
@@ -123,7 +123,7 @@ func onReady() {
 			app.mResume.Hide()
 			app.mPauseMenu.Show()
 			logf("auto-connect resumed")
-			notify("Burrow", "Auto-connect resumed")
+			notify("Burrow VPN", "Auto-connect resumed")
 			glib.IdleAdd(func() bool { app.updateStatus(); return false })
 		}
 	}()
@@ -160,11 +160,11 @@ func onReady() {
 				conn := app.cfg.WGConnection
 				go func() {
 					if err := wgUpWithRetry(conn); err != nil {
-						notify("Burrow", "Failed to connect: "+err.Error())
+						notify("Burrow VPN", "Failed to connect: "+err.Error())
 						logf("connect failed: %v", err)
 						return
 					}
-					notify("Burrow", "Connected to "+conn)
+					notify("Burrow VPN", "Connected to "+conn)
 					app.applyIPv6KillSwitch(conn)
 					time.Sleep(time.Second)
 					glib.IdleAdd(func() bool { app.updateStatus(); return false })
@@ -203,11 +203,11 @@ func (app *App) applyPause(d time.Duration) {
 	if d == 0 {
 		app.pauseUntil = time.Now().Add(365 * 24 * time.Hour)
 		logf("auto-connect paused until restart")
-		notify("Burrow", "Auto-connect paused until restart")
+		notify("Burrow VPN", "Auto-connect paused until restart")
 	} else {
 		app.pauseUntil = time.Now().Add(d)
 		logf("auto-connect paused for %v", d)
-		notify("Burrow", fmt.Sprintf("Auto-connect paused for %s", formatDuration(d)))
+		notify("Burrow VPN", fmt.Sprintf("Auto-connect paused for %s", formatDuration(d)))
 	}
 	app.mPauseMenu.Hide()
 	app.mResume.Show()
@@ -224,7 +224,7 @@ func (app *App) applyIPv6KillSwitch(conn string) {
 	}
 	if err := blockIPv6(iface); err != nil {
 		logf("IPv6 kill switch failed: %v", err)
-		notify("Burrow", "IPv6 kill switch failed — check sudo permissions")
+		notify("Burrow VPN", "IPv6 kill switch failed — check sudo permissions")
 		return
 	}
 	app.ipv6Blocked = true
@@ -271,7 +271,7 @@ func (app *App) updateStatus() {
 	switch {
 	case conn == "":
 		app.mStatus.SetTitle("No VPN configured")
-		systray.SetTooltip("Burrow — no VPN configured")
+		systray.SetTooltip("Burrow VPN — no VPN configured")
 	case connected:
 		dur := ""
 		if !app.connectedSince.IsZero() {
@@ -283,23 +283,23 @@ func (app *App) updateStatus() {
 			stats = fmt.Sprintf(" (↑%s ↓%s)", formatBytes(tx), formatBytes(rx))
 		}
 		app.mStatus.SetTitle(fmt.Sprintf("VPN on (%s)%s%s", conn, dur, stats))
-		systray.SetTooltip("Burrow — VPN connected")
+		systray.SetTooltip("Burrow VPN — VPN connected")
 	case paused:
 		remaining := time.Until(app.pauseUntil)
 		app.mStatus.SetTitle(fmt.Sprintf("Paused — %s remaining", formatDuration(remaining)))
-		systray.SetTooltip("Burrow — auto-connect paused")
+		systray.SetTooltip("Burrow VPN — auto-connect paused")
 	case onEthernet:
 		app.mStatus.SetTitle("Trusted network (wired)")
-		systray.SetTooltip("Burrow — trusted wired network")
+		systray.SetTooltip("Burrow VPN — trusted wired network")
 	case trusted:
 		app.mStatus.SetTitle("Trusted network (" + ssid + ")")
-		systray.SetTooltip("Burrow — trusted network")
+		systray.SetTooltip("Burrow VPN — trusted network")
 	case ssid != "":
 		app.mStatus.SetTitle("Untrusted (" + ssid + ") — VPN off")
-		systray.SetTooltip("Burrow — untrusted network")
+		systray.SetTooltip("Burrow VPN — untrusted network")
 	default:
 		app.mStatus.SetTitle("No network")
-		systray.SetTooltip("Burrow — no network")
+		systray.SetTooltip("Burrow VPN — no network")
 	}
 
 	// Swap tray icon based on connection state
@@ -330,11 +330,11 @@ func (app *App) updateStatus() {
 			go func() {
 				logf("auto: connecting %s (untrusted %q)", conn, ssid)
 				if err := wgUpWithRetry(conn); err != nil {
-					notify("Burrow", "Auto-connect failed: "+err.Error())
+					notify("Burrow VPN", "Auto-connect failed: "+err.Error())
 					logf("auto-connect failed: %v", err)
 					return
 				}
-				notify("Burrow", "Connected to "+conn)
+				notify("Burrow VPN", "Connected to "+conn)
 				app.applyIPv6KillSwitch(conn)
 				time.Sleep(time.Second)
 				glib.IdleAdd(func() bool { app.updateStatus(); return false })
@@ -343,7 +343,7 @@ func (app *App) updateStatus() {
 			go func() {
 				logf("auto: disconnecting %s (trusted %q)", conn, ssid)
 				wgDown(conn)
-				notify("Burrow", "Disconnected from "+conn)
+				notify("Burrow VPN", "Disconnected from "+conn)
 				app.teardownIPv6KillSwitch()
 				time.Sleep(time.Second)
 				glib.IdleAdd(func() bool { app.updateStatus(); return false })
