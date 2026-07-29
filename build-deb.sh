@@ -3,7 +3,7 @@ set -e
 
 VERSION="0.2.0"
 ARCH="amd64"
-PKG="burrow_${VERSION}_${ARCH}"
+PKG="burrow-vpn_${VERSION}_${ARCH}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 STAGE="$ROOT/packaging"
 
