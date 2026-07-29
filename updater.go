@@ -16,7 +16,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.7.1"
+const currentVersion = "0.7.2"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
@@ -64,7 +64,7 @@ func runUpdateCheck(app *App) {
 	} else {
 		logf("update check: already on latest (%s)", currentVersion)
 		glib.IdleAdd(func() bool {
-			app.mCheckUpdate.SetTitle("Up to date")
+			app.mCheckUpdate.SetTitle("Check for updates")
 			return false
 		})
 	}
