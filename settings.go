@@ -33,12 +33,12 @@ func newSettingsWindow(app *App) *SettingsWindow {
 	connLabel, _ := gtk.LabelNew("Connection:")
 	combo, _ := gtk.ComboBoxTextNew()
 	combo.SetHExpand(true)
-	sw.refreshConnections(combo)
 	combo.Connect("changed", func() {
 		app.cfg.WGConnection = combo.GetActiveText()
 		saveConfig(app.cfg)
 		app.updateStatus()
 	})
+	sw.refreshConnections(combo)
 	connRow.PackStart(connLabel, false, false, 0)
 	connRow.PackStart(combo, true, true, 0)
 	wgBox.PackStart(connRow, false, false, 0)
