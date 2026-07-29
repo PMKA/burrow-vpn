@@ -11,11 +11,12 @@ import subprocess
 import shutil
 
 CONFIG_PATH = os.path.expanduser('~/.config/burrow/config.json')
+_DIR = os.path.dirname(os.path.abspath(__file__))
 ICONS = {
-    'connected':    'network-vpn',
-    'disconnected': 'network-vpn-disconnected',
-    'trusted':      'network-wireless',
-    'error':        'network-error',
+    'connected':    os.path.join(_DIR, 'icons', 'burrow.svg'),
+    'disconnected': os.path.join(_DIR, 'icons', 'burrow.svg'),
+    'trusted':      os.path.join(_DIR, 'icons', 'burrow.svg'),
+    'error':        os.path.join(_DIR, 'icons', 'burrow.svg'),
 }
 
 def load_config():

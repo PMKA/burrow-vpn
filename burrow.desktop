@@ -2,7 +2,7 @@
 Name=Burrow
 Comment=Auto-connect WireGuard VPN on untrusted WiFi
 Exec=python3 /home/arama/burrow/burrow.py
-Icon=network-vpn
+Icon=/home/arama/burrow/icons/burrow.svg
 Terminal=false
 Type=Application
 Categories=Network;Security;
