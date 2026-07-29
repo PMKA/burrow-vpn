@@ -51,8 +51,11 @@ func onReady() {
 	if cfg.WGConnection == "" {
 		win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 		win.Hide()
-		cfg = runSetupWizard(win, cfg)
-		saveConfig(cfg)
+		var skipped bool
+		cfg, skipped = runSetupWizard(win, cfg)
+		if !skipped {
+			saveConfig(cfg)
+		}
 		win.Destroy()
 	}
 

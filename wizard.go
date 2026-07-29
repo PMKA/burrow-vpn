@@ -4,14 +4,14 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-// runSetupWizard opens a first-run modal and returns the updated config.
-// Called when no WireGuard connection is configured yet.
-func runSetupWizard(parent *gtk.Window, cfg Config) Config {
+// runSetupWizard opens a first-run modal and returns the updated config and
+// whether the user skipped setup. If skipped, the caller should not save config.
+func runSetupWizard(parent *gtk.Window, cfg Config) (Config, bool) {
 	dlg, _ := gtk.DialogNewWithButtons("Welcome to Burrow VPN", parent,
 		gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT,
-		[]interface{}{"Done", gtk.RESPONSE_OK},
+		[]interface{}{"Skip for now", gtk.RESPONSE_CANCEL, "Done", gtk.RESPONSE_OK},
 	)
-	dlg.SetDefaultSize(440, 360)
+	dlg.SetDefaultSize(440, 380)
 	dlg.SetBorderWidth(16)
 	defer dlg.Destroy()
 
@@ -139,8 +139,13 @@ func runSetupWizard(parent *gtk.Window, cfg Config) Config {
 	ca.Add(autoRow)
 
 	dlg.ShowAll()
-	dlg.Run()
+	response := dlg.Run()
+
+	if response != gtk.RESPONSE_OK {
+		logf("wizard skipped")
+		return cfg, true
+	}
 
 	logf("wizard complete: connection=%q trusted=%v auto=%v", cfg.WGConnection, cfg.TrustedSSIDs, cfg.AutoConnect)
-	return cfg
+	return cfg, false
 }
