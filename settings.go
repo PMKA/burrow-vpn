@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -198,18 +199,60 @@ func newSettingsWindow(app *App) *SettingsWindow {
 	ip6Row.PackEnd(ip6Switch, false, false, 0)
 	root.PackStart(ip6Row, false, false, 0)
 
-	// Check for updates toggle
-	updRow, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
-	updLabel, _ := gtk.LabelNew("Check for updates automatically")
+	// Updates section
+	updFrame, _ := gtk.FrameNew(" Updates ")
+	updBox, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 10)
+	updBox.SetBorderWidth(10)
+	updFrame.Add(updBox)
+
+	// Version row
+	verRow, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
+	verLabel, _ := gtk.LabelNew("Version " + currentVersion)
+	verLabel.SetXAlign(0)
+	verLabel.SetHExpand(true)
+	checkBtn, _ := gtk.ButtonNewWithLabel("Check for updates")
+	statusLabel, _ := gtk.LabelNew("")
+	statusLabel.SetXAlign(0)
+	checkBtn.Connect("clicked", func() {
+		checkBtn.SetSensitive(false)
+		statusLabel.SetText("Checking…")
+		go func() {
+			v, u, err := fetchLatestRelease()
+			glib.IdleAdd(func() bool {
+				checkBtn.SetSensitive(true)
+				if err != nil {
+					statusLabel.SetText("Check failed: " + err.Error())
+					return false
+				}
+				if isNewerVersion(v, currentVersion) {
+					statusLabel.SetText("v" + v + " available!")
+					app.onUpdateFound(v, u)
+				} else {
+					statusLabel.SetText("You're up to date")
+				}
+				return false
+			})
+		}()
+	})
+	verRow.PackStart(verLabel, true, true, 0)
+	verRow.PackStart(checkBtn, false, false, 0)
+	updBox.PackStart(verRow, false, false, 0)
+	updBox.PackStart(statusLabel, false, false, 0)
+
+	// Auto-check toggle
+	autoUpdRow, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
+	autoUpdLabel, _ := gtk.LabelNew("Check automatically on startup")
 	updSwitch, _ := gtk.SwitchNew()
 	updSwitch.SetActive(app.cfg.CheckForUpdates)
 	updSwitch.Connect("notify::active", func() {
 		app.cfg.CheckForUpdates = updSwitch.GetActive()
 		saveConfig(app.cfg)
 	})
-	updRow.PackStart(updLabel, true, true, 0)
-	updRow.PackEnd(updSwitch, false, false, 0)
-	root.PackStart(updRow, false, false, 0)
+	autoUpdRow.PackStart(autoUpdLabel, true, true, 0)
+	autoUpdRow.PackEnd(updSwitch, false, false, 0)
+	updBox.PackStart(autoUpdRow, false, false, 0)
+
+	root.PackStart(updFrame, false, false, 0)
 
 	win.ShowAll()
 	win.Connect("delete-event", func() bool {

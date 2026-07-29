@@ -17,6 +17,8 @@ chmod 755 "$STAGE/usr/local/bin/burrow-vpn"
 chmod 755 "$STAGE/DEBIAN/postinst"
 
 cp icons/burrow-on.png  "$STAGE/usr/share/icons/hicolor/512x512/apps/burrow-vpn.png"
+cp icons/burrow-on.png  "$STAGE/usr/share/icons/hicolor/512x512/apps/burrow-on.png"
+cp icons/burrow-off.png "$STAGE/usr/share/icons/hicolor/512x512/apps/burrow-off.png"
 
 echo "==> Building .deb..."
 dpkg-deb --root-owner-group --build "$STAGE" "${PKG}.deb"

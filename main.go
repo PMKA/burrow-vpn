@@ -34,7 +34,13 @@ func iconDir() string {
 }
 
 func readIconFile(name string) []byte {
-	for _, dir := range []string{iconDir(), "icons"} {
+	dirs := []string{
+		iconDir(),
+		"icons",
+		"/usr/share/icons/hicolor/512x512/apps",
+		filepath.Join(os.Getenv("HOME"), ".local/share/icons/hicolor/512x512/apps"),
+	}
+	for _, dir := range dirs {
 		if data, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
 			return data
 		}
