@@ -9,7 +9,7 @@ import (
 )
 
 const currentVersion = "0.4.0"
-const releaseAPI = "https://api.github.com/repos/PMKA/burrow/releases/latest"
+const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
