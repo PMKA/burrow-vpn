@@ -95,7 +95,19 @@ func importWGConfig(path string) (string, error) {
 		}
 	}
 
-	out, err := exec.Command("nmcli", "con", "import", "type", "wireguard", "file", path).CombinedOutput()
+	// Copy to /tmp first — NetworkManager can't reliably read files on network
+	// mounts (e.g. NAS paths via symlink) and times out on the D-Bus call.
+	tmpPath := filepath.Join(os.TempDir(), base+".conf")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("could not read config file: %v", err)
+	}
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
+		return "", fmt.Errorf("could not stage config file: %v", err)
+	}
+	defer os.Remove(tmpPath)
+
+	out, err := exec.Command("nmcli", "con", "import", "type", "wireguard", "file", tmpPath).CombinedOutput()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg == "" {
