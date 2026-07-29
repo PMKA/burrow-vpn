@@ -25,14 +25,14 @@ type App struct {
 	ipv6Blocked    bool
 }
 
-func iconPath() string {
+func iconDir() string {
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "icons", "burrow.svg")
+	return filepath.Join(filepath.Dir(exe), "icons")
 }
 
-func readIcon() []byte {
-	for _, p := range []string{iconPath(), "icons/burrow.svg"} {
-		if data, err := os.ReadFile(p); err == nil {
+func readIconFile(name string) []byte {
+	for _, dir := range []string{iconDir(), "icons"} {
+		if data, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
 			return data
 		}
 	}
@@ -58,7 +58,7 @@ func onReady() {
 
 	app := &App{cfg: cfg}
 
-	if icon := readIcon(); icon != nil {
+	if icon := readIconFile("burrow-off.png"); icon != nil {
 		systray.SetIcon(icon)
 	}
 	systray.SetTitle("Burrow")
@@ -300,6 +300,15 @@ func (app *App) updateStatus() {
 	default:
 		app.mStatus.SetTitle("No network")
 		systray.SetTooltip("Burrow — no network")
+	}
+
+	// Swap tray icon based on connection state
+	iconName := "burrow-off.png"
+	if connected {
+		iconName = "burrow-on.png"
+	}
+	if icon := readIconFile(iconName); icon != nil {
+		systray.SetIcon(icon)
 	}
 
 	// Connect / Disconnect sensitivity
