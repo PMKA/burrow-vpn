@@ -27,7 +27,15 @@ type App struct {
 	pendingUpdateVersion string
 	pendingUpdateURL     string
 	pendingUpdateSHA256  string
+	startedAt            time.Time
 }
+
+// Auto-connect/disconnect is held off for this long after launch. On login,
+// NetworkManager, autofs and other network consumers are still settling
+// routes; tearing down an already-connected VPN in that window can yank an
+// interface out from under an in-flight connection (e.g. a NAS mount),
+// hanging whatever was using it instead of just erroring out.
+const autoActionGracePeriod = 8 * time.Second
 
 func iconDir() string {
 	exe, _ := os.Executable()
@@ -72,7 +80,7 @@ func onReady() {
 		win.Destroy()
 	}
 
-	app := &App{cfg: cfg}
+	app := &App{cfg: cfg, startedAt: time.Now()}
 
 	startUpdateChecker(app)
 
@@ -168,6 +176,13 @@ func onReady() {
 	}()
 
 	app.updateStatus()
+
+	// Guarantee one re-evaluation right as the grace period ends, so a
+	// pending auto-disconnect/auto-connect isn't left waiting on the next
+	// NM event or the 30s ticker.
+	time.AfterFunc(autoActionGracePeriod, func() {
+		glib.IdleAdd(func() bool { app.updateStatus(); return false })
+	})
 
 	for {
 		select {
@@ -364,7 +379,7 @@ func (app *App) updateStatus() {
 	}
 
 	// Auto-connect logic
-	if app.cfg.AutoConnect && conn != "" && !paused {
+	if app.cfg.AutoConnect && conn != "" && !paused && time.Since(app.startedAt) >= autoActionGracePeriod {
 		if !trusted && !connected {
 			go func() {
 				logf("auto: connecting %s (untrusted %q)", conn, ssid)
