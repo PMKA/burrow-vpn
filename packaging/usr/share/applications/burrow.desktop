@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Burrow
+Comment=Auto-connect WireGuard VPN on untrusted networks
+Exec=/usr/local/bin/burrow
+Icon=burrow
+Type=Application
+Categories=Network;System;
+StartupNotify=false

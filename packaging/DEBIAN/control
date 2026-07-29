@@ -1,0 +1,12 @@
+Package: burrow
+Version: 0.2.0
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: libayatana-appindicator3-1, libdbusmenu-gtk3-4, libayatana-ido3-0.4-0, libgtk-3-0 | libgtk-3-0t64, network-manager, wireguard-tools
+Maintainer: PMKA
+Description: Auto-connect WireGuard VPN on untrusted networks
+ Burrow sits in your system tray and automatically connects your WireGuard
+ VPN whenever you join a network you haven't marked as trusted. When you
+ return to a trusted network it disconnects. Includes a settings window
+ for managing trusted SSIDs and a first-run setup wizard.

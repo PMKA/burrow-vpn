@@ -167,9 +167,36 @@ func newSettingsWindow(app *App) *SettingsWindow {
 		saveConfig(app.cfg)
 		app.updateStatus()
 	})
-	autoRow.PackStart(autoLabel, false, false, 0)
+	autoRow.PackStart(autoLabel, true, true, 0)
 	autoRow.PackEnd(autoSwitch, false, false, 0)
 	root.PackStart(autoRow, false, false, 0)
+
+	// Trust ethernet toggle
+	ethRow, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
+	ethLabel, _ := gtk.LabelNew("Trust wired (ethernet) connections")
+	ethSwitch, _ := gtk.SwitchNew()
+	ethSwitch.SetActive(app.cfg.TrustEthernet)
+	ethSwitch.Connect("notify::active", func() {
+		app.cfg.TrustEthernet = ethSwitch.GetActive()
+		saveConfig(app.cfg)
+		app.updateStatus()
+	})
+	ethRow.PackStart(ethLabel, true, true, 0)
+	ethRow.PackEnd(ethSwitch, false, false, 0)
+	root.PackStart(ethRow, false, false, 0)
+
+	// IPv6 kill switch toggle
+	ip6Row, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
+	ip6Label, _ := gtk.LabelNew("IPv6 kill switch (requires sudo)")
+	ip6Switch, _ := gtk.SwitchNew()
+	ip6Switch.SetActive(app.cfg.IPv6KillSwitch)
+	ip6Switch.Connect("notify::active", func() {
+		app.cfg.IPv6KillSwitch = ip6Switch.GetActive()
+		saveConfig(app.cfg)
+	})
+	ip6Row.PackStart(ip6Label, true, true, 0)
+	ip6Row.PackEnd(ip6Switch, false, false, 0)
+	root.PackStart(ip6Row, false, false, 0)
 
 	win.ShowAll()
 	win.Connect("delete-event", func() bool {
