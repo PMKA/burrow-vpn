@@ -25,7 +25,7 @@ func initLogger() {
 		return
 	}
 	logger = log.New(f, "", log.LstdFlags)
-	logf("burrow started")
+	logf("burrow-vpn started")
 }
 
 func rotateLogs(path string) {
