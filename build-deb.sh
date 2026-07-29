@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 ARCH="amd64"
 PKG="burrow-vpn_${VERSION}_${ARCH}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"

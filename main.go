@@ -40,6 +40,11 @@ func readIconFile(name string) []byte {
 }
 
 func main() {
+	if !acquireLock() {
+		notify("Burrow VPN", "Already running in the system tray.")
+		return
+	}
+	defer releaseLock()
 	gtk.Init(nil)
 	systray.Run(onReady, onExit)
 }
