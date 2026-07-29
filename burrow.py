@@ -280,6 +280,7 @@ class WgTrustedApp:
             'burrow', ICONS['disconnected'],
             AppIndicator3.IndicatorCategory.SYSTEM_SERVICES
         )
+        self.indicator.set_title('Burrow')
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.menu = Gtk.Menu()
 
