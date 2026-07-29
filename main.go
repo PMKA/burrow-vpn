@@ -62,14 +62,12 @@ func onReady() {
 	initLogger()
 	cfg := loadConfig()
 
-	if cfg.WGConnection == "" {
+	if !cfg.SetupComplete {
 		win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 		win.Hide()
-		var skipped bool
-		cfg, skipped = runSetupWizard(win, cfg)
-		if !skipped {
-			saveConfig(cfg)
-		}
+		cfg, _ = runSetupWizard(win, cfg)
+		cfg.SetupComplete = true
+		saveConfig(cfg)
 		win.Destroy()
 	}
 

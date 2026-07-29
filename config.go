@@ -13,6 +13,7 @@ type Config struct {
 	TrustEthernet  bool     `json:"trust_ethernet"`
 	IPv6KillSwitch bool     `json:"ipv6_kill_switch"`
 	CheckForUpdates bool    `json:"check_for_updates"`
+	SetupComplete  bool     `json:"setup_complete"`
 }
 
 func configPath() string {
@@ -20,11 +21,20 @@ func configPath() string {
 	return filepath.Join(home, ".config", "burrow-vpn", "config.json")
 }
 
+// oldConfigPath is where settings lived before the burrow -> burrow-vpn rename.
+func oldConfigPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "burrow", "config.json")
+}
+
 func loadConfig() Config {
 	cfg := Config{AutoConnect: true, TrustEthernet: true, CheckForUpdates: true}
 	data, err := os.ReadFile(configPath())
 	if err != nil {
-		return cfg
+		data, err = os.ReadFile(oldConfigPath())
+		if err != nil {
+			return cfg
+		}
 	}
 	json.Unmarshal(data, &cfg)
 	return cfg
