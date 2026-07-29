@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -82,13 +83,28 @@ func wgDown(name string) error {
 }
 
 func importWGConfig(path string) (string, error) {
-	err := exec.Command("nmcli", "con", "import", "type", "wireguard", "file", path).Run()
-	if err != nil {
-		return "", err
+	// nmcli requires the filename (without .conf) to be a valid interface name:
+	// max 15 chars, alphanumeric, hyphen, underscore only.
+	base := strings.TrimSuffix(filepath.Base(path), ".conf")
+	if len(base) > 15 {
+		return "", fmt.Errorf("filename %q is too long — rename it to 15 characters or fewer (e.g. wg0.conf)", base)
 	}
-	parts := strings.Split(path, "/")
-	name := strings.TrimSuffix(parts[len(parts)-1], ".conf")
-	return name, nil
+	for _, c := range base {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return "", fmt.Errorf("filename %q contains invalid characters — use only letters, numbers, hyphens and underscores", base)
+		}
+	}
+
+	out, err := exec.Command("nmcli", "con", "import", "type", "wireguard", "file", path).CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		logf("import failed: %s", msg)
+		return "", fmt.Errorf("%s", msg)
+	}
+	return base, nil
 }
 
 func listWGConnections() []string {
