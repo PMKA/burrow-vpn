@@ -12,6 +12,7 @@ type Config struct {
 	AutoConnect    bool     `json:"auto_connect"`
 	TrustEthernet  bool     `json:"trust_ethernet"`
 	IPv6KillSwitch bool     `json:"ipv6_kill_switch"`
+	CheckForUpdates bool    `json:"check_for_updates"`
 }
 
 func configPath() string {
@@ -20,7 +21,7 @@ func configPath() string {
 }
 
 func loadConfig() Config {
-	cfg := Config{AutoConnect: true, TrustEthernet: true}
+	cfg := Config{AutoConnect: true, TrustEthernet: true, CheckForUpdates: true}
 	data, err := os.ReadFile(configPath())
 	if err != nil {
 		return cfg

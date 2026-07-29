@@ -58,6 +58,8 @@ func onReady() {
 
 	app := &App{cfg: cfg}
 
+	startUpdateChecker(app)
+
 	if icon := readIconFile("burrow-off.png"); icon != nil {
 		systray.SetIcon(icon)
 	}
