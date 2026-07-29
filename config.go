@@ -7,13 +7,13 @@ import (
 )
 
 type Config struct {
-	TrustedSSIDs   []string `json:"trusted_ssids"`
-	WGConnection   string   `json:"wg_connection"`
-	AutoConnect    bool     `json:"auto_connect"`
-	TrustEthernet  bool     `json:"trust_ethernet"`
-	IPv6KillSwitch bool     `json:"ipv6_kill_switch"`
-	CheckForUpdates bool    `json:"check_for_updates"`
-	SetupComplete  bool     `json:"setup_complete"`
+	TrustedSSIDs    []string `json:"trusted_ssids"`
+	WGConnection    string   `json:"wg_connection"`
+	AutoConnect     bool     `json:"auto_connect"`
+	TrustEthernet   bool     `json:"trust_ethernet"`
+	IPv6KillSwitch  bool     `json:"ipv6_kill_switch"`
+	CheckForUpdates bool     `json:"check_for_updates"`
+	SetupComplete   bool     `json:"setup_complete"`
 }
 
 func configPath() string {

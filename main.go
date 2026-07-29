@@ -12,20 +12,21 @@ import (
 )
 
 type App struct {
-	cfg                 Config
-	settingsWin         *SettingsWindow
-	mStatus             *systray.MenuItem
-	mConnect            *systray.MenuItem
-	mDisconnect         *systray.MenuItem
-	mPauseMenu          *systray.MenuItem
-	mResume             *systray.MenuItem
-	mCheckUpdate        *systray.MenuItem
-	pauseUntil          time.Time
-	connectedSince      time.Time
-	wgIface             string
-	ipv6Blocked         bool
+	cfg                  Config
+	settingsWin          *SettingsWindow
+	mStatus              *systray.MenuItem
+	mConnect             *systray.MenuItem
+	mDisconnect          *systray.MenuItem
+	mPauseMenu           *systray.MenuItem
+	mResume              *systray.MenuItem
+	mCheckUpdate         *systray.MenuItem
+	pauseUntil           time.Time
+	connectedSince       time.Time
+	wgIface              string
+	ipv6Blocked          bool
 	pendingUpdateVersion string
 	pendingUpdateURL     string
+	pendingUpdateSHA256  string
 }
 
 func iconDir() string {
@@ -166,8 +167,6 @@ func onReady() {
 		}
 	}()
 
-	go gtk.Main()
-
 	app.updateStatus()
 
 	for {
@@ -192,7 +191,10 @@ func onReady() {
 		case <-app.mDisconnect.ClickedCh:
 			if app.cfg.WGConnection != "" {
 				logf("user: disconnecting %s", app.cfg.WGConnection)
-				wgDown(app.cfg.WGConnection)
+				if err := wgDown(app.cfg.WGConnection); err != nil {
+					notify("Burrow VPN", "Failed to disconnect: "+err.Error())
+					logf("disconnect failed: %v", err)
+				}
 				app.teardownIPv6KillSwitch()
 				time.Sleep(time.Second)
 				glib.IdleAdd(func() bool { app.updateStatus(); return false })
@@ -200,17 +202,17 @@ func onReady() {
 
 		case <-app.mCheckUpdate.ClickedCh:
 			if app.pendingUpdateVersion != "" {
-				v, u := app.pendingUpdateVersion, app.pendingUpdateURL
-				go performUpdate(app, v, u)
+				v, u, s := app.pendingUpdateVersion, app.pendingUpdateURL, app.pendingUpdateSHA256
+				go performUpdate(app, v, u, s)
 			} else if app.cfg.CheckForUpdates {
 				go func() {
-					v, u, err := fetchLatestRelease()
+					v, u, s, err := fetchLatestRelease()
 					if err != nil {
 						notify("Burrow VPN", "Update check failed: "+err.Error())
 						return
 					}
 					if isNewerVersion(v, currentVersion) {
-						app.onUpdateFound(v, u)
+						app.onUpdateFound(v, u, s)
 					} else {
 						notify("Burrow VPN", "You're up to date (v"+currentVersion+")")
 					}
@@ -379,7 +381,11 @@ func (app *App) updateStatus() {
 		} else if trusted && connected {
 			go func() {
 				logf("auto: disconnecting %s (trusted %q)", conn, ssid)
-				wgDown(conn)
+				if err := wgDown(conn); err != nil {
+					notify("Burrow VPN", "Auto-disconnect failed: "+err.Error())
+					logf("auto-disconnect failed: %v", err)
+					return
+				}
 				notify("Burrow VPN", "Disconnected from "+conn)
 				app.teardownIPv6KillSwitch()
 				time.Sleep(time.Second)
@@ -420,9 +426,10 @@ func formatBytes(b uint64) string {
 	}
 }
 
-func (app *App) onUpdateFound(version, debURL string) {
+func (app *App) onUpdateFound(version, debURL, sha256Sum string) {
 	app.pendingUpdateVersion = version
 	app.pendingUpdateURL = debURL
+	app.pendingUpdateSHA256 = sha256Sum
 	glib.IdleAdd(func() bool {
 		app.mCheckUpdate.SetTitle("Update available: v" + version)
 		return false

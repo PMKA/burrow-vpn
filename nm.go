@@ -61,7 +61,15 @@ func getWGStatus(name string) bool {
 }
 
 func wgUp(name string) error {
-	return exec.Command("nmcli", "con", "up", name).Run()
+	out, err := exec.Command("nmcli", "con", "up", name).CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return fmt.Errorf("%s", msg)
+	}
+	return nil
 }
 
 func wgUpWithRetry(name string) error {
@@ -79,7 +87,15 @@ func wgUpWithRetry(name string) error {
 }
 
 func wgDown(name string) error {
-	return exec.Command("nmcli", "con", "down", name).Run()
+	out, err := exec.Command("nmcli", "con", "down", name).CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return fmt.Errorf("%s", msg)
+	}
+	return nil
 }
 
 func importWGConfig(path string) (string, error) {
