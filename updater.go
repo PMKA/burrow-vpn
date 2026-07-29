@@ -15,7 +15,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.6.1"
+const currentVersion = "0.6.2"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
@@ -152,15 +152,15 @@ func installUpdate(debPath string) error {
 
 func performUpdate(app *App, version, debURL string) {
 	glib.IdleAdd(func() bool {
-		dlg, _ := gtk.DialogNewWithButtons(
-			"Update Burrow VPN",
-			nil,
-			gtk.DIALOG_MODAL,
-			[]interface{}{"Cancel", gtk.RESPONSE_CANCEL, "Download & Install", gtk.RESPONSE_OK},
-		)
+		dlg, _ := gtk.DialogNew()
+		dlg.SetTitle("Update Burrow VPN")
 		dlg.SetDefaultSize(400, 130)
+		dlg.SetModal(true)
+		dlg.AddButton("Cancel", gtk.RESPONSE_CANCEL)
+		dlg.AddButton("Download & Install", gtk.RESPONSE_OK)
 		ca, _ := dlg.GetContentArea()
 		ca.SetBorderWidth(16)
+		ca.SetSpacing(8)
 		lbl, _ := gtk.LabelNew(fmt.Sprintf("Version %s is available (you have %s).\nDownload and install now?", version, currentVersion))
 		lbl.SetXAlign(0)
 		ca.Add(lbl)
@@ -225,13 +225,12 @@ func performUpdate(app *App, version, debURL string) {
 
 			glib.IdleAdd(func() bool {
 				progDlg.Destroy()
-				rdlg, _ := gtk.DialogNewWithButtons(
-					"Update installed",
-					nil,
-					gtk.DIALOG_MODAL,
-					[]interface{}{"Later", gtk.RESPONSE_CANCEL, "Restart Now", gtk.RESPONSE_OK},
-				)
+				rdlg, _ := gtk.DialogNew()
+				rdlg.SetTitle("Update installed")
 				rdlg.SetDefaultSize(380, 120)
+				rdlg.SetModal(true)
+				rdlg.AddButton("Later", gtk.RESPONSE_CANCEL)
+				rdlg.AddButton("Restart Now", gtk.RESPONSE_OK)
 				rca, _ := rdlg.GetContentArea()
 				rca.SetBorderWidth(16)
 				rlbl, _ := gtk.LabelNew(fmt.Sprintf("Burrow VPN %s installed successfully.", version))
