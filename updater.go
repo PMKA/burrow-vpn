@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const currentVersion = "0.4.0"
+const currentVersion = "0.5.0"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type githubRelease struct {
