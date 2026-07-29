@@ -12,7 +12,7 @@ type SettingsWindow struct {
 
 func newSettingsWindow(app *App) *SettingsWindow {
 	win, _ := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
-	win.SetTitle("Burrow — Settings")
+	win.SetTitle("Burrow VPN — Settings")
 	win.SetDefaultSize(480, 420)
 	win.SetBorderWidth(16)
 	win.SetResizable(false)
@@ -197,6 +197,19 @@ func newSettingsWindow(app *App) *SettingsWindow {
 	ip6Row.PackStart(ip6Label, true, true, 0)
 	ip6Row.PackEnd(ip6Switch, false, false, 0)
 	root.PackStart(ip6Row, false, false, 0)
+
+	// Check for updates toggle
+	updRow, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 8)
+	updLabel, _ := gtk.LabelNew("Check for updates automatically")
+	updSwitch, _ := gtk.SwitchNew()
+	updSwitch.SetActive(app.cfg.CheckForUpdates)
+	updSwitch.Connect("notify::active", func() {
+		app.cfg.CheckForUpdates = updSwitch.GetActive()
+		saveConfig(app.cfg)
+	})
+	updRow.PackStart(updLabel, true, true, 0)
+	updRow.PackEnd(updSwitch, false, false, 0)
+	root.PackStart(updRow, false, false, 0)
 
 	win.ShowAll()
 	win.Connect("delete-event", func() bool {

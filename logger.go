@@ -13,7 +13,7 @@ var logger *log.Logger
 
 func initLogger() {
 	home, _ := os.UserHomeDir()
-	dir := filepath.Join(home, ".local", "share", "burrow")
+	dir := filepath.Join(home, ".local", "share", "burrow-vpn")
 	os.MkdirAll(dir, 0755)
 	path := filepath.Join(dir, "app.log")
 
