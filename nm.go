@@ -95,14 +95,16 @@ func importWGConfig(path string) (string, error) {
 		}
 	}
 
-	// Copy to /tmp first — NetworkManager can't reliably read files on network
-	// mounts (e.g. NAS paths via symlink) and times out on the D-Bus call.
-	tmpPath := filepath.Join(os.TempDir(), base+".conf")
-	data, err := os.ReadFile(path)
+	// Read and strip fields unsupported by NetworkManager's WireGuard plugin
+	// (PostUp/Down, PreUp/Down, Table, FwMark) — NM crashes or errors on them.
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("could not read config file: %v", err)
 	}
-	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
+	cleaned := stripUnsupportedWGFields(string(raw))
+
+	tmpPath := filepath.Join(os.TempDir(), base+".conf")
+	if err := os.WriteFile(tmpPath, []byte(cleaned), 0600); err != nil {
 		return "", fmt.Errorf("could not stage config file: %v", err)
 	}
 	defer os.Remove(tmpPath)
@@ -117,6 +119,27 @@ func importWGConfig(path string) (string, error) {
 		return "", fmt.Errorf("%s", msg)
 	}
 	return base, nil
+}
+
+// stripUnsupportedWGFields removes WireGuard config fields that NetworkManager
+// doesn't understand and will either reject or crash on.
+func stripUnsupportedWGFields(conf string) string {
+	unsupported := []string{"postup", "postdown", "preup", "predown", "table", "fwmark"}
+	var out []string
+	for _, line := range strings.Split(conf, "\n") {
+		trimmed := strings.ToLower(strings.TrimSpace(line))
+		skip := false
+		for _, field := range unsupported {
+			if strings.HasPrefix(trimmed, field+" ") || strings.HasPrefix(trimmed, field+"=") {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			out = append(out, line)
+		}
+	}
+	return strings.Join(out, "\n")
 }
 
 func listWGConnections() []string {
