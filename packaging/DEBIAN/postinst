@@ -4,14 +4,49 @@ update-desktop-database /usr/share/applications || true
 gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
 chmod 0440 /etc/sudoers.d/burrow || true
 
-REAL_USER="${SUDO_USER:-$(logname 2>/dev/null || true)}"
+# Find the real logged-in user (works with sudo, pkexec, and GUI installers)
+REAL_USER="${SUDO_USER:-}"
+if [ -z "$REAL_USER" ]; then
+    REAL_USER=$(logname 2>/dev/null || true)
+fi
+if [ -z "$REAL_USER" ]; then
+    # Last resort: find the owner of the active graphical session
+    REAL_USER=$(who | grep -E "\(:.*\)" | awk '{print $1}' | head -1 || true)
+fi
+
 if [ -n "$REAL_USER" ]; then
     USER_ID=$(id -u "$REAL_USER" 2>/dev/null || true)
     if [ -n "$USER_ID" ]; then
-        DBUS="unix:path=/run/user/${USER_ID}/bus"
-        # Launch the app into the user's session
-        su - "$REAL_USER" -c \
-            "DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=${DBUS} nohup /usr/local/bin/burrow-vpn >/dev/null 2>&1 &" \
-            2>/dev/null || true
+        XDG_RT="/run/user/$USER_ID"
+
+        # Read session environment from the user's systemd --user process
+        USER_SYSTEMD_PID=$(pgrep -u "$USER_ID" "^systemd$" 2>/dev/null | head -1 || true)
+        DISPLAY_VAL=""
+        WAYLAND_VAL=""
+        DBUS_VAL=""
+        if [ -n "$USER_SYSTEMD_PID" ] && [ -r "/proc/$USER_SYSTEMD_PID/environ" ]; then
+            DISPLAY_VAL=$(tr '\0' '\n' < "/proc/$USER_SYSTEMD_PID/environ" 2>/dev/null | grep "^DISPLAY=" | head -1 | cut -d= -f2- || true)
+            WAYLAND_VAL=$(tr '\0' '\n' < "/proc/$USER_SYSTEMD_PID/environ" 2>/dev/null | grep "^WAYLAND_DISPLAY=" | head -1 | cut -d= -f2- || true)
+            DBUS_VAL=$(tr '\0' '\n' < "/proc/$USER_SYSTEMD_PID/environ" 2>/dev/null | grep "^DBUS_SESSION_BUS_ADDRESS=" | head -1 | cut -d= -f2- || true)
+        fi
+
+        DBUS_VAL="${DBUS_VAL:-unix:path=$XDG_RT/bus}"
+
+        ENV_STR="XDG_RUNTIME_DIR=$XDG_RT DBUS_SESSION_BUS_ADDRESS=$DBUS_VAL"
+        if [ -n "$WAYLAND_VAL" ]; then
+            ENV_STR="$ENV_STR WAYLAND_DISPLAY=$WAYLAND_VAL"
+        elif [ -n "$DISPLAY_VAL" ]; then
+            ENV_STR="$ENV_STR DISPLAY=$DISPLAY_VAL"
+        else
+            # Check for a wayland socket in the runtime dir as fallback
+            WAYLAND_SOCK=$(ls "$XDG_RT/wayland-"* 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || true)
+            if [ -n "$WAYLAND_SOCK" ]; then
+                ENV_STR="$ENV_STR WAYLAND_DISPLAY=$WAYLAND_SOCK"
+            else
+                ENV_STR="$ENV_STR DISPLAY=:0"
+            fi
+        fi
+
+        su - "$REAL_USER" -c "$ENV_STR nohup /usr/local/bin/burrow-vpn >/dev/null 2>&1 &" 2>/dev/null || true
     fi
 fi
