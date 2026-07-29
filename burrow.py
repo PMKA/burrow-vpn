@@ -10,7 +10,7 @@ import os
 import subprocess
 import shutil
 
-CONFIG_PATH = os.path.expanduser('~/.config/wg-trusted/config.json')
+CONFIG_PATH = os.path.expanduser('~/.config/burrow/config.json')
 ICONS = {
     'connected':    'network-vpn',
     'disconnected': 'network-vpn-disconnected',
@@ -77,7 +77,7 @@ def list_wg_connections():
 
 class SettingsWindow(Gtk.Window):
     def __init__(self, app):
-        super().__init__(title='WG Trusted — Settings')
+        super().__init__(title='Burrow — Settings')
         self.app = app
         self.cfg = app.cfg
         self.set_default_size(480, 400)
@@ -276,7 +276,7 @@ class WgTrustedApp:
 
     def _build_indicator(self):
         self.indicator = AppIndicator3.Indicator.new(
-            'wg-trusted', ICONS['disconnected'],
+            'burrow', ICONS['disconnected'],
             AppIndicator3.IndicatorCategory.SYSTEM_SERVICES
         )
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)

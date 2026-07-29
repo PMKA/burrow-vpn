@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=WG Trusted
-Comment=Auto-connect WireGuard on untrusted WiFi
-Exec=python3 /home/arama/wg-trusted/wg_trusted.py
-Icon=network-vpn
-Terminal=false
-Type=Application
-Categories=Network;Security;
-StartupNotify=false
