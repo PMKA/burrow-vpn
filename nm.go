@@ -95,6 +95,19 @@ func importWGConfig(path string) (string, error) {
 		}
 	}
 
+	// If a connection with this name already exists, just return it.
+	if existing := listWGConnections(); func() bool {
+		for _, c := range existing {
+			if c == base {
+				return true
+			}
+		}
+		return false
+	}() {
+		logf("import: connection %q already exists, skipping", base)
+		return base, nil
+	}
+
 	// Read and strip fields unsupported by NetworkManager's WireGuard plugin
 	// (PostUp/Down, PreUp/Down, Table, FwMark) — NM crashes or errors on them.
 	raw, err := os.ReadFile(path)

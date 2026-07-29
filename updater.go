@@ -14,7 +14,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.6.8"
+const currentVersion = "0.6.9"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
@@ -155,6 +155,7 @@ func performUpdate(app *App, version, debURL string) {
 		dlg.SetTitle("Update Burrow VPN")
 		dlg.SetDefaultSize(400, 130)
 		dlg.SetModal(true)
+		dlg.SetKeepAbove(true)
 		dlg.AddButton("Cancel", gtk.RESPONSE_CANCEL)
 		dlg.AddButton("Download & Install", gtk.RESPONSE_OK)
 		ca, _ := dlg.GetContentArea()
@@ -164,6 +165,7 @@ func performUpdate(app *App, version, debURL string) {
 		lbl.SetXAlign(0)
 		ca.Add(lbl)
 		dlg.ShowAll()
+		dlg.Present()
 		response := dlg.Run()
 		dlg.Destroy()
 
@@ -175,6 +177,7 @@ func performUpdate(app *App, version, debURL string) {
 		progDlg.SetTitle("Updating Burrow VPN…")
 		progDlg.SetDefaultSize(400, 110)
 		progDlg.SetDeletable(false)
+		progDlg.SetKeepAbove(true)
 		progCa, _ := progDlg.GetContentArea()
 		progCa.SetBorderWidth(16)
 		progCa.SetSpacing(10)
@@ -184,6 +187,7 @@ func performUpdate(app *App, version, debURL string) {
 		progCa.Add(progLbl)
 		progCa.Add(progBar)
 		progDlg.ShowAll()
+		progDlg.Present()
 
 		go func() {
 			debPath, err := downloadUpdate(debURL, func(pct float64) {
@@ -228,6 +232,7 @@ func performUpdate(app *App, version, debURL string) {
 				rdlg.SetTitle("Update installed")
 				rdlg.SetDefaultSize(380, 120)
 				rdlg.SetModal(true)
+				rdlg.SetKeepAbove(true)
 				rdlg.AddButton("Later", gtk.RESPONSE_CANCEL)
 				rdlg.AddButton("Restart Now", gtk.RESPONSE_OK)
 				rca, _ := rdlg.GetContentArea()
@@ -236,6 +241,7 @@ func performUpdate(app *App, version, debURL string) {
 				rlbl.SetXAlign(0)
 				rca.Add(rlbl)
 				rdlg.ShowAll()
+				rdlg.Present()
 
 				if rdlg.Run() == gtk.RESPONSE_OK {
 					rdlg.Destroy()
