@@ -12,17 +12,20 @@ import (
 )
 
 type App struct {
-	cfg            Config
-	settingsWin    *SettingsWindow
-	mStatus        *systray.MenuItem
-	mConnect       *systray.MenuItem
-	mDisconnect    *systray.MenuItem
-	mPauseMenu     *systray.MenuItem // visible when not paused
-	mResume        *systray.MenuItem // visible when paused
-	pauseUntil     time.Time
-	connectedSince time.Time
-	wgIface        string
-	ipv6Blocked    bool
+	cfg                 Config
+	settingsWin         *SettingsWindow
+	mStatus             *systray.MenuItem
+	mConnect            *systray.MenuItem
+	mDisconnect         *systray.MenuItem
+	mPauseMenu          *systray.MenuItem
+	mResume             *systray.MenuItem
+	mCheckUpdate        *systray.MenuItem
+	pauseUntil          time.Time
+	connectedSince      time.Time
+	wgIface             string
+	ipv6Blocked         bool
+	pendingUpdateVersion string
+	pendingUpdateURL     string
 }
 
 func iconDir() string {
@@ -139,6 +142,7 @@ func onReady() {
 	}()
 
 	systray.AddSeparator()
+	app.mCheckUpdate = systray.AddMenuItem("Check for updates", "")
 	mSettings := systray.AddMenuItem("Settings…", "")
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "")
@@ -188,6 +192,25 @@ func onReady() {
 				app.teardownIPv6KillSwitch()
 				time.Sleep(time.Second)
 				glib.IdleAdd(func() bool { app.updateStatus(); return false })
+			}
+
+		case <-app.mCheckUpdate.ClickedCh:
+			if app.pendingUpdateVersion != "" {
+				v, u := app.pendingUpdateVersion, app.pendingUpdateURL
+				go performUpdate(app, v, u)
+			} else if app.cfg.CheckForUpdates {
+				go func() {
+					v, u, err := fetchLatestRelease()
+					if err != nil {
+						notify("Burrow VPN", "Update check failed: "+err.Error())
+						return
+					}
+					if isNewerVersion(v, currentVersion) {
+						app.onUpdateFound(v, u)
+					} else {
+						notify("Burrow VPN", "You're up to date (v"+currentVersion+")")
+					}
+				}()
 			}
 
 		case <-mSettings.ClickedCh:
@@ -391,6 +414,17 @@ func formatBytes(b uint64) string {
 	default:
 		return fmt.Sprintf("%dB", b)
 	}
+}
+
+func (app *App) onUpdateFound(version, debURL string) {
+	app.pendingUpdateVersion = version
+	app.pendingUpdateURL = debURL
+	glib.IdleAdd(func() bool {
+		app.mCheckUpdate.SetTitle("Update available: v" + version)
+		return false
+	})
+	notify("Burrow VPN", "Update available: v"+version+" — click 'Update available' in the tray to install")
+	logf("update available: v%s", version)
 }
 
 func onExit() {}
