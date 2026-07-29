@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 ARCH="amd64"
 PKG="burrow_${VERSION}_${ARCH}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -25,6 +28,20 @@ func getCurrentSSID() string {
 	return ""
 }
 
+func isEthernetConnected() bool {
+	out, err := nmcli("-f", "type,state", "dev")
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(out, "\n") {
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 && strings.TrimSpace(parts[0]) == "ethernet" && strings.TrimSpace(parts[1]) == "connected" {
+			return true
+		}
+	}
+	return false
+}
+
 func getWGStatus(name string) bool {
 	if name == "" {
 		return false
@@ -44,6 +61,20 @@ func getWGStatus(name string) bool {
 
 func wgUp(name string) error {
 	return exec.Command("nmcli", "con", "up", name).Run()
+}
+
+func wgUpWithRetry(name string) error {
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			time.Sleep(2 * time.Second)
+		}
+		if lastErr = wgUp(name); lastErr == nil {
+			return nil
+		}
+		logf("connect attempt %d failed: %v", i+1, lastErr)
+	}
+	return lastErr
 }
 
 func wgDown(name string) error {
@@ -75,6 +106,56 @@ func listWGConnections() []string {
 		}
 	}
 	return result
+}
+
+// getWGInterface returns the network interface name for an active WG connection.
+func getWGInterface(connName string) string {
+	out, _ := nmcli("--fields", "GENERAL.IP-IFACE", "con", "show", connName)
+	for _, line := range strings.Split(out, "\n") {
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			if iface := strings.TrimSpace(parts[1]); iface != "" {
+				return iface
+			}
+		}
+	}
+	return connName // WireGuard typically uses the connection name as interface name
+}
+
+// getIfaceStats reads RX/TX bytes for an interface from /proc/net/dev.
+func getIfaceStats(iface string) (rx, tx uint64) {
+	if iface == "" {
+		return
+	}
+	data, err := os.ReadFile("/proc/net/dev")
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, iface+":") {
+			continue
+		}
+		fields := strings.Fields(strings.TrimPrefix(line, iface+":"))
+		if len(fields) >= 9 {
+			fmt.Sscan(fields[0], &rx)
+			fmt.Sscan(fields[8], &tx)
+		}
+		return
+	}
+	return
+}
+
+// blockIPv6 drops all IPv6 output except on the given interface and loopback.
+func blockIPv6(iface string) error {
+	exec.Command("sudo", "ip6tables", "-I", "OUTPUT", "-o", "lo", "-j", "ACCEPT").Run()
+	return exec.Command("sudo", "ip6tables", "-I", "OUTPUT", "!", "-o", iface, "-j", "DROP").Run()
+}
+
+func unblockIPv6(iface string) error {
+	exec.Command("sudo", "ip6tables", "-D", "OUTPUT", "!", "-o", iface, "-j", "DROP").Run()
+	exec.Command("sudo", "ip6tables", "-D", "OUTPUT", "-o", "lo", "-j", "ACCEPT").Run()
+	return nil
 }
 
 func subscribeNMEvents(onChange func()) (*dbus.Conn, error) {

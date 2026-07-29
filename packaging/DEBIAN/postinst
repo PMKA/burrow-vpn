@@ -2,3 +2,4 @@
 set -e
 update-desktop-database /usr/share/applications || true
 gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+chmod 0440 /etc/sudoers.d/burrow || true

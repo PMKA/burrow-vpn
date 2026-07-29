@@ -7,9 +7,11 @@ import (
 )
 
 type Config struct {
-	TrustedSSIDs []string `json:"trusted_ssids"`
-	WGConnection string   `json:"wg_connection"`
-	AutoConnect  bool     `json:"auto_connect"`
+	TrustedSSIDs   []string `json:"trusted_ssids"`
+	WGConnection   string   `json:"wg_connection"`
+	AutoConnect    bool     `json:"auto_connect"`
+	TrustEthernet  bool     `json:"trust_ethernet"`
+	IPv6KillSwitch bool     `json:"ipv6_kill_switch"`
 }
 
 func configPath() string {
@@ -18,7 +20,7 @@ func configPath() string {
 }
 
 func loadConfig() Config {
-	cfg := Config{AutoConnect: true}
+	cfg := Config{AutoConnect: true, TrustEthernet: true}
 	data, err := os.ReadFile(configPath())
 	if err != nil {
 		return cfg
