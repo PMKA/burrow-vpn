@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Burrow
+Comment=Auto-connect WireGuard VPN on untrusted WiFi
+Exec=python3 /home/arama/burrow/burrow.py
+Icon=/home/arama/burrow/icons/burrow.svg
+Terminal=false
+Type=Application
+Categories=Network;Security;
+StartupNotify=false
