@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -28,6 +29,17 @@ type App struct {
 	pendingUpdateURL     string
 	pendingUpdateSHA256  string
 	startedAt            time.Time
+
+	// actionMu serializes every connect/disconnect, whether triggered by a
+	// menu click or by the auto-connect logic in updateStatus. Without it,
+	// overlapping triggers (NM emits a StateChanged signal for practically
+	// any device/connection change, plus the 30s ticker, plus the grace-
+	// period timer) can each independently decide to act and race — e.g.
+	// one goroutine running "nmcli con up" while another runs "nmcli con
+	// down" on the same connection — which can flap the interface out from
+	// under something else using the network at that moment (like an
+	// in-flight NAS mount).
+	actionMu sync.Mutex
 }
 
 // Auto-connect/disconnect is held off for this long after launch. On login,
@@ -190,29 +202,14 @@ func onReady() {
 			if app.cfg.WGConnection != "" {
 				logf("user: connecting %s", app.cfg.WGConnection)
 				conn := app.cfg.WGConnection
-				go func() {
-					if err := wgUpWithRetry(conn); err != nil {
-						notify("Burrow VPN", "Failed to connect: "+err.Error())
-						logf("connect failed: %v", err)
-						return
-					}
-					notify("Burrow VPN", "Connected to "+conn)
-					app.applyIPv6KillSwitch(conn)
-					time.Sleep(time.Second)
-					glib.IdleAdd(func() bool { app.updateStatus(); return false })
-				}()
+				go app.tryConnect(conn, "user")
 			}
 
 		case <-app.mDisconnect.ClickedCh:
 			if app.cfg.WGConnection != "" {
 				logf("user: disconnecting %s", app.cfg.WGConnection)
-				if err := wgDown(app.cfg.WGConnection); err != nil {
-					notify("Burrow VPN", "Failed to disconnect: "+err.Error())
-					logf("disconnect failed: %v", err)
-				}
-				app.teardownIPv6KillSwitch()
-				time.Sleep(time.Second)
-				glib.IdleAdd(func() bool { app.updateStatus(); return false })
+				conn := app.cfg.WGConnection
+				go app.tryDisconnect(conn, "user")
 			}
 
 		case <-app.mCheckUpdate.ClickedCh:
@@ -381,33 +378,53 @@ func (app *App) updateStatus() {
 	// Auto-connect logic
 	if app.cfg.AutoConnect && conn != "" && !paused && time.Since(app.startedAt) >= autoActionGracePeriod {
 		if !trusted && !connected {
-			go func() {
-				logf("auto: connecting %s (untrusted %q)", conn, ssid)
-				if err := wgUpWithRetry(conn); err != nil {
-					notify("Burrow VPN", "Auto-connect failed: "+err.Error())
-					logf("auto-connect failed: %v", err)
-					return
-				}
-				notify("Burrow VPN", "Connected to "+conn)
-				app.applyIPv6KillSwitch(conn)
-				time.Sleep(time.Second)
-				glib.IdleAdd(func() bool { app.updateStatus(); return false })
-			}()
+			logf("auto: connecting %s (untrusted %q)", conn, ssid)
+			go app.tryConnect(conn, "auto")
 		} else if trusted && connected {
-			go func() {
-				logf("auto: disconnecting %s (trusted %q)", conn, ssid)
-				if err := wgDown(conn); err != nil {
-					notify("Burrow VPN", "Auto-disconnect failed: "+err.Error())
-					logf("auto-disconnect failed: %v", err)
-					return
-				}
-				notify("Burrow VPN", "Disconnected from "+conn)
-				app.teardownIPv6KillSwitch()
-				time.Sleep(time.Second)
-				glib.IdleAdd(func() bool { app.updateStatus(); return false })
-			}()
+			logf("auto: disconnecting %s (trusted %q)", conn, ssid)
+			go app.tryDisconnect(conn, "auto")
 		}
 	}
+}
+
+// tryConnect attempts to bring up conn, serialized against every other
+// connect/disconnect via actionMu. If an action is already in flight it logs
+// and returns immediately rather than queuing — the next NM event, ticker
+// tick, or menu click will re-evaluate and retry if still needed.
+func (app *App) tryConnect(conn, source string) {
+	if !app.actionMu.TryLock() {
+		logf("%s: connect to %s skipped, another action is in progress", source, conn)
+		return
+	}
+	defer app.actionMu.Unlock()
+
+	if err := wgUpWithRetry(conn); err != nil {
+		notify("Burrow VPN", "Failed to connect: "+err.Error())
+		logf("%s: connect failed: %v", source, err)
+		return
+	}
+	notify("Burrow VPN", "Connected to "+conn)
+	app.applyIPv6KillSwitch(conn)
+	time.Sleep(time.Second)
+	glib.IdleAdd(func() bool { app.updateStatus(); return false })
+}
+
+func (app *App) tryDisconnect(conn, source string) {
+	if !app.actionMu.TryLock() {
+		logf("%s: disconnect from %s skipped, another action is in progress", source, conn)
+		return
+	}
+	defer app.actionMu.Unlock()
+
+	if err := wgDown(conn); err != nil {
+		notify("Burrow VPN", "Failed to disconnect: "+err.Error())
+		logf("%s: disconnect failed: %v", source, err)
+		return
+	}
+	notify("Burrow VPN", "Disconnected from "+conn)
+	app.teardownIPv6KillSwitch()
+	time.Sleep(time.Second)
+	glib.IdleAdd(func() bool { app.updateStatus(); return false })
 }
 
 func formatDuration(d time.Duration) string {
