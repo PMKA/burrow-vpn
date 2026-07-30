@@ -16,7 +16,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const currentVersion = "0.7.2"
+const currentVersion = "0.7.3"
 const releaseAPI = "https://api.github.com/repos/PMKA/burrow-vpn/releases/latest"
 
 type releaseAsset struct {
