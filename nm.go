@@ -87,6 +87,8 @@ func wgUpWithRetry(name string) error {
 }
 
 func wgDown(name string) error {
+	killSocketsForAddr(getConnIPv4(name))
+
 	out, err := exec.Command("nmcli", "con", "down", name).CombinedOutput()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
@@ -96,6 +98,34 @@ func wgDown(name string) error {
 		return fmt.Errorf("%s", msg)
 	}
 	return nil
+}
+
+// getConnIPv4 returns the tunnel's local IPv4 address (without prefix) for
+// an active nmcli connection, or "" if it can't be determined.
+func getConnIPv4(name string) string {
+	out, err := nmcli("-g", "IP4.ADDRESS", "con", "show", name)
+	if err != nil || out == "" {
+		return ""
+	}
+	addr := strings.Split(strings.Split(out, "\n")[0], "|")[0]
+	return strings.Split(addr, "/")[0]
+}
+
+// killSocketsForAddr force-closes any TCP sockets still bound to ip before
+// the interface disappears. Without this, a client with an in-flight
+// session sourced from the tunnel address (e.g. a CIFS mount to a NAS
+// reached over the VPN) is orphaned the moment nmcli tears the interface
+// down: the kernel leaves it blocked in D-state on a socket with no route,
+// which SIGTERM cannot interrupt since the process is uninterruptible until
+// the blocking syscall itself returns. Killing the socket first lets the
+// kernel return an error to the caller instead of hanging indefinitely.
+func killSocketsForAddr(ip string) {
+	if ip == "" {
+		return
+	}
+	if out, err := exec.Command("sudo", "ss", "-K", "src", ip).CombinedOutput(); err != nil {
+		logf("killSocketsForAddr(%s): %v: %s", ip, err, strings.TrimSpace(string(out)))
+	}
 }
 
 func importWGConfig(path string) (string, error) {
